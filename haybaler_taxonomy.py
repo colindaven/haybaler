@@ -17,8 +17,7 @@ def has_numbers(input_string):
 
 
 def read_csv(file, path):
-    csv = pd.read_csv(path + "/" + file, decimal=",", index_col=0, sep='\t')
-    return csv
+    return pd.read_csv(path + "/" + file, decimal=",", index_col=0, sep='\t')
 
 
 def find_species(csv, input_file, input_path):
@@ -52,12 +51,11 @@ def find_genus(csv):
             if not has_numbers(element) and element:
                 if not re.search("[Hh]uman", element):
                     name = element
-                    break
                 else:  # for e.g. NC_001352_1_Human_papillomavirus___2__complete_genome_VIR
                     next_element_index = split.index(element) + 1
                     next_element = split[next_element_index]
                     name = element + " " + next_element
-                    break
+                break
             else:
                 name = "NOT KNOWN"
         genus.append(name)
@@ -217,11 +215,11 @@ def report(taxa, filtered_csv, taxonomy, csv, input_file, rank):
         print(total_chr, "total chromosomes,", "lineage found for", chr_lineage, "chromosomes, no lineage found for",
               chr_no_lineage, "chromosomes")
         print("Found lineage for", chr_lineage / total_chr, "of the reference")
-        print("")
     else:
         print("The input for lineage is", len(taxa), "organisms long. The output is", len(filtered_csv),
               "long. In the process of getting taxid, lineage and filtering something must have gone wrong")
-        print("")
+
+    print("")
         # uncomment the following lines to compare the lineages in different filter steps. Good for bugs
         # all_steps = pd.concat((pd.Series(csv.index.values), pd.Series(genus)), axis=1, ignore_index=True)
         # all_steps = pd.concat((all_steps, taxonomy[["Name", "TaxID"]]), axis=1, ignore_index=True)

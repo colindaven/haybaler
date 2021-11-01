@@ -24,8 +24,7 @@ version = "0.30 - April 2021"
 
 
 def read_csv(filename, filepath):
-    file = pd.read_csv(filepath + '/' + filename, decimal=",", index_col=0)
-    return file
+    return pd.read_csv(filepath + '/' + filename, decimal=",", index_col=0)
 
 
 def txt_to_df(filename, filepath):
@@ -51,10 +50,12 @@ def join_dfs(file, name, path, column, input_name):
         old = pd.read_csv(path + "/" + column + "_" + name, decimal=",", index_col=0, sep='\t')
         old.fillna(0.0, inplace=True)
         if sample not in old.columns:  # no double samples
-            new_chr = []  # get chromosomes which are new in this sample
-            for chromosome in file.index:
-                if chromosome not in old.index:
-                    new_chr.append(chromosome)
+            new_chr = [
+                chromosome
+                for chromosome in file.index
+                if chromosome not in old.index
+            ]
+
             # get a df with the chr_length and gc_ref from the new chromosomes
             if 'gc_ref' in file:
                 new_chr_df = file.loc[new_chr, ['chr_length', 'gc_ref']]
@@ -70,8 +71,6 @@ def join_dfs(file, name, path, column, input_name):
                 new.insert(1, 'gc_ref', tmp)
         else:
             new = old
-    # if the file for the wanted stat does not exist, make this file containing the columns which are always the same
-    # and the current sample
     else:
         if 'gc_ref' in file:
             new = file[['chr_length', 'gc_ref', column]].copy()
@@ -87,15 +86,15 @@ def join_dfs(file, name, path, column, input_name):
 # calculate in which order the organisms should be in the output files.
 # the organism with the most read count in all samples should come first
 def find_order(df):
-    samples = []  # list with all samples
-    for column in df.columns:
-        if column != 'chr_length' and column != 'gc_ref':
-            samples.append(column)
+    samples = [
+        column
+        for column in df.columns
+        if column not in ['chr_length', 'gc_ref']
+    ]
+
     sum_organisms = []  # list of the sum form all samples for each organism (row sums)
     for organism in df.index:
-        tmp_organism = []  # list of the stats from all samples for one organism
-        for column in samples:
-            tmp_organism.append(float(df.at[organism, column]))
+        tmp_organism = [float(df.at[organism, column]) for column in samples]
         sum_organisms.append(sum(tmp_organism))
     df['sum_organisms'] = sum_organisms  # add a column with the sums to the df
     df = df.sort_values(by='sum_organisms', ascending=False)  # sort the df by the sums
@@ -107,17 +106,16 @@ def find_order(df):
 # sort the new df so it fits the previous calculated order
 def sort_new(df, order):
     order_df = pd.DataFrame(index=order)  # create an empty order_df with just the right orderer organisms as index
-    new = pd.concat([order_df, df], axis=1, sort=False)  # concat the df on the order_df so it is in the right order too
-    return new
+    return pd.concat([order_df, df], axis=1, sort=False)
 
 
 def adding_species(path, column, name):
     # when concating two df's, the value species gets lost, so it needs to be added afterwards
     with open(path + "/" + column + "_" + name, 'r+') as f:
         content = f.read()
-        if not content.split()[0] == "species":
+        if content.split()[0] != "species":
             f.seek(0, 0)
-            f.write(f"species" + content)
+            f.write('species' + content)
 
 
 def get_taxa_to_exclude(file, limit, taxa_to_exclude, path):
@@ -180,7 +178,7 @@ def main(input_files, input_path, output_path, output_file, readcount_limit, rpm
             raise Exception("No input file given. Please specify input file. Try --help for help")
         # make an own file for each stat, so for each column in the input file (or add the stats to existing files)
         for col in file.columns:
-            if col != "chr_length" and col != "gc_ref":  # columns which are the same in every sample. Don't need extra file
+            if col not in ["chr_length", "gc_ref"]:  # columns which are the same in every sample. Don't need extra file
                 if debug:
                     print(col)
                 df = join_dfs(file, output_file, output_path, col, input_file)
@@ -208,9 +206,9 @@ def main(input_files, input_path, output_path, output_file, readcount_limit, rpm
     # check if the df of the excluded taxa from readcount and RPMM exist, concat them if both do
     if excluded_taxa_readcount is not None and excluded_taxa_RPMM is not None:
         excluded_taxa_df = pd.concat([excluded_taxa_readcount, excluded_taxa_RPMM], axis=1)
-    elif excluded_taxa_readcount is not None and excluded_taxa_RPMM is None:
+    elif excluded_taxa_readcount is not None:
         excluded_taxa_df = excluded_taxa_readcount
-    elif excluded_taxa_readcount is None and excluded_taxa_RPMM is not None:
+    elif excluded_taxa_RPMM is not None:
         excluded_taxa_df = excluded_taxa_RPMM
     else:
         excluded_taxa_df = pd.DataFrame()
@@ -219,9 +217,9 @@ def main(input_files, input_path, output_path, output_file, readcount_limit, rpm
     # when concating two df's, the value species gets lost, so it needs to be added afterwards
     with open(output_path + "/excluded_taxa.csv", 'r+') as f:
         content = f.read()
-        if not content.split()[0] == "species":
+        if content.split()[0] != "species":
             f.seek(0, 0)
-            f.write(f"species" + content)
+            f.write('species' + content)
     for haybaler_csv in os.listdir(output_path):
         if haybaler_csv.endswith(output_file):
             exclude_taxa(haybaler_csv, output_path, taxa_to_exclude)  # exclude the taxa from the haybaler.csv
